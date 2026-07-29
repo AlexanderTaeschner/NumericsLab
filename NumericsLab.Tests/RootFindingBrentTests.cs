@@ -42,4 +42,24 @@ public class RootFindingBrentTests
         Assert.Equal(-1.6437373573790809E-08, result);
         Assert.Equal(57, counter);
     }
+
+    [Fact]
+    public void Test5()
+    {
+        int counter = 0;
+        bool success = Brent.TryFindRoot((double x, double[] parameters) => { counter++; return Math.Cos(x) - x; }, [], -1.0, 3.0, 0.0, 9, out double result);
+        Assert.True(success);
+        Assert.Equal(0.73908513321516067, result);
+        Assert.Equal(10, counter);
+    }
+
+    [Fact]
+    public void Test6()
+    {
+        int counter = 0;
+        bool success = Brent.TryFindRoot((double x, double[] parameters) => { counter++; return Math.Cos(x) - x; }, [], -1.0, 3.0, 0.0, 8, out double result);
+        Assert.False(success);
+        Assert.Equal(0.73908513321526159, result);
+        Assert.Equal(9, counter);
+    }
 }

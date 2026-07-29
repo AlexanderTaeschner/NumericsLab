@@ -101,6 +101,34 @@ public static class Brent
         double upperLimit,
         double tolerance)
     {
+        if (!TryFindRoot(function, parameters, lowerLimit, upperLimit, tolerance, int.MaxValue, out double root))
+        {
+            throw new InvalidOperationException("Root finding failed.");
+        }
+
+        return root;
+    }
+
+    /// <summary>
+    /// Find the root of the specified function.
+    /// </summary>
+    /// <param name="function">The function.</param>
+    /// <param name="parameters">The parameters.</param>
+    /// <param name="lowerLimit">The lower limit.</param>
+    /// <param name="upperLimit">The upper limit.</param>
+    /// <param name="tolerance">The tolerance.</param>
+    /// <param name="maxIterations">The maximum number of iterations.</param>
+    /// <param name="root">When this method returns, contains the root of the function if found; otherwise, 0.</param>
+    /// <returns>True if the root was found; otherwise, false.</returns>
+    public static bool TryFindRoot(
+        OneDimensionalFunction function,
+        double[] parameters,
+        double lowerLimit,
+        double upperLimit,
+        double tolerance,
+        int maxIterations,
+        out double root)
+    {
         double a, b, c;    /* Abscissae, descr. see above */
         double fa;    /* f(a)    */
         double fb;    /* f(b)    */
@@ -112,6 +140,8 @@ public static class Brent
         fb = function(b, parameters);
         c = a;
         fc = fa;
+
+        int iterations = 0;
 
         while (true)
         {
@@ -140,7 +170,15 @@ public static class Brent
 
             if (Math.Abs(new_step) <= tol_act || fb == 0)
             {
-                return b;    /* Acceptable approx. is found */
+                root = b;
+                return true;    /* Acceptable approx. is found */
+            }
+
+            iterations++;
+            if (iterations >= maxIterations)
+            {
+                root = b;
+                return false;   /* Maximum iterations reached */
             }
 
             /* Decide if the interpolation can be tried */
