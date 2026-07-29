@@ -9,14 +9,6 @@ using NumericsLab.Internals;
 namespace NumericsLab.RootFinding;
 
 /// <summary>
-/// Function to be used for finding its root.
-/// </summary>
-/// <param name="argument">Argument of the function.</param>
-/// <param name="parameters">Array of constant parameters for the function.</param>
-/// <returns>The functional value.</returns>
-public delegate double OneDimensionalFunction(double argument, double[] parameters);
-
-/// <summary>
 /// Class used to find the root of a function using Brent's method.
 /// </summary>
 public static class Brent
