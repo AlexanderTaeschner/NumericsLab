@@ -1,3 +1,7 @@
+// <copyright file="CubicSpline.cs" company="Alexander Täschner">
+// Copyright (c) Alexander Täschner. All rights reserved.
+// </copyright>
+
 using NumericsLab.Internals;
 
 namespace NumericsLab.Interpolation;

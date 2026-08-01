@@ -11,7 +11,7 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <Version>0.0.1.3</Version>
+    <Version>0.0.1.4</Version>
     <Authors>Alexander Täschner</Authors>
     <Description>Collection of numerical algorithms for use in .NET applications.</Description>
     <Copyright>Copyright (c) Alexander Täschner 2026</Copyright>

@@ -17,14 +17,13 @@ public sealed class Differentiate
     /// Computes the first derivative of a one-dimensional function at a given point using central difference approximation.
     /// </summary>
     /// <param name="function">The function to differentiate.</param>
-    /// <param name="parameters">The parameters of the function.</param>
     /// <param name="x">The point at which to evaluate the derivative.</param>
     /// <returns>The first derivative of the function at the given point.</returns>
-    public static double FirstDerivative(OneDimensionalFunction function, double[] parameters, double x)
+    public static double FirstDerivative(Func<double, double> function, double x)
     {
         double h = BaseStepSize * (Math.Abs(x) + 1.0);
-        double fxph = function(x + h, parameters);
-        double fxmh = function(x - h, parameters);
+        double fxph = function(x + h);
+        double fxmh = function(x - h);
         return (fxph - fxmh) / (2.0 * h);
     }
 }

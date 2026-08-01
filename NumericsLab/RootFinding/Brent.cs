@@ -81,19 +81,17 @@ public static class Brent
     /// Find the root of the specified function.
     /// </summary>
     /// <param name="function">The function.</param>
-    /// <param name="parameters">The parameters.</param>
     /// <param name="lowerLimit">The lower limit.</param>
     /// <param name="upperLimit">The upper limit.</param>
     /// <param name="tolerance">The tolerance.</param>
     /// <returns>The root of the function.</returns>
     public static double FindRoot(
-        OneDimensionalFunction function,
-        double[] parameters,
+        Func<double, double> function,
         double lowerLimit,
         double upperLimit,
         double tolerance)
     {
-        if (!TryFindRoot(function, parameters, lowerLimit, upperLimit, tolerance, int.MaxValue, out double root))
+        if (!TryFindRoot(function, lowerLimit, upperLimit, tolerance, int.MaxValue, out double root))
         {
             throw new InvalidOperationException("Root finding failed.");
         }
@@ -105,7 +103,6 @@ public static class Brent
     /// Find the root of the specified function.
     /// </summary>
     /// <param name="function">The function.</param>
-    /// <param name="parameters">The parameters.</param>
     /// <param name="lowerLimit">The lower limit.</param>
     /// <param name="upperLimit">The upper limit.</param>
     /// <param name="tolerance">The tolerance.</param>
@@ -113,8 +110,7 @@ public static class Brent
     /// <param name="root">When this method returns, contains the root of the function if found; otherwise, 0.</param>
     /// <returns>True if the root was found; otherwise, false.</returns>
     public static bool TryFindRoot(
-        OneDimensionalFunction function,
-        double[] parameters,
+        Func<double, double> function,
         double lowerLimit,
         double upperLimit,
         double tolerance,
@@ -128,8 +124,8 @@ public static class Brent
 
         a = lowerLimit;
         b = upperLimit;
-        fa = function(a, parameters);
-        fb = function(b, parameters);
+        fa = function(a);
+        fb = function(b);
         c = a;
         fc = fa;
 
@@ -232,7 +228,7 @@ public static class Brent
             a = b;  /* Save the previous approx. */
             fa = fb;
             b += new_step;
-            fb = function(b, parameters); /* Do step to a new approxim. */
+            fb = function(b); /* Do step to a new approxim. */
             if ((fb > 0 && fc > 0) || (fb < 0 && fc < 0))
             { /* Adjust c for it to have a sign*/
                 c = a; /* opposite to that of b */
