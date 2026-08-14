@@ -261,7 +261,7 @@ c     **********
         double epsmch = MyMath.Epsilon;
 
         int info = 0; // info is the return status of the algorithm
-        int nfev = 0; // number of function evaluations
+        int nfev; // number of function evaluations
 
         // evaluate the function at the starting point
         // and calculate its norm.
@@ -271,7 +271,7 @@ c     **********
         int m = fvec.Length;
         nfev = 1;
         NumericMatrix<double> fjac = new(m, n);
-        double fnorm = EuclidianNorm(fvec);
+        double fnorm = EuclidianNorm(m, fvec);
 
         NumericVector<int> ipvt = new(n);
         NumericVector<double> qtf = new(n);
@@ -296,7 +296,7 @@ c     **********
             nfev += n;
 
             // compute the qr factorization of the jacobian.
-            QRFactorization(ref fjac, true, ref ipvt, ref wa1, ref wa2, ref wa3);
+            QRFactorization(m, n, ref fjac, true, ref ipvt, ref wa1, ref wa2, ref wa3);
 
             // on the first iteration and if mode is 1, scale according
             // to the norms of the columns of the initial jacobian.
@@ -321,7 +321,7 @@ c     **********
                     wa3[j] = diag[j] * x[j];
                 }
 
-                xnorm = EuclidianNorm(wa3);
+                xnorm = EuclidianNorm(n, wa3);
                 delta = factor * xnorm;
                 if (delta == 0.0)
                 {
@@ -402,7 +402,7 @@ c     **********
             do
             {
                 // determine the levenberg - marquardt parameter.
-                LevenbergMarquardtParameter(fjac, ipvt, diag, qtf, delta, ref par, wa1, wa2, wa3, wa4);
+                LevenbergMarquardtParameter(n, fjac, ipvt, diag, qtf, delta, ref par, wa1, wa2, wa3, wa4);
 
                 // store the direction p and x +p.calculate the norm of p.
                 for (int j = 1; j <= n; j++)
@@ -412,7 +412,7 @@ c     **********
                     wa3[j] = diag[j] * wa1[j];
                 }
 
-                double pnorm = EuclidianNorm(wa3);
+                double pnorm = EuclidianNorm(n, wa3);
 
                 // on the first iteration, adjust the initial step bound.
                 if (iter == 1)
@@ -425,13 +425,13 @@ c     **********
                 nfev++;
 
                 // if (iflag.lt. 0) go to 300
-                double fnorm1 = EuclidianNorm(wa4);
+                double fnorm1 = EuclidianNorm(m, wa4);
 
                 // compute the scaled actual reduction.
                 double actred = -1.0;
                 if (0.1 * fnorm1 < fnorm)
                 {
-                    actred = 1.0 - (fnorm1 / fnorm * (fnorm1 / fnorm));
+                    actred = 1.0 - ((fnorm1 / fnorm) * (fnorm1 / fnorm));
                 }
 
                 // compute the scaled predicted reduction and
@@ -447,9 +447,9 @@ c     **********
                     }
                 }
 
-                double temp1 = EuclidianNorm(wa3) / fnorm;
-                double temp2 = Math.Sqrt(par) * pnorm / fnorm;
-                double prered = (temp1 * temp1) + (temp2 * temp2 / 0.5);
+                double temp1 = EuclidianNorm(n, wa3) / fnorm;
+                double temp2 = (Math.Sqrt(par) * pnorm) / fnorm;
+                double prered = (temp1 * temp1) + ((temp2 * temp2) / 0.5);
                 double dirder = -((temp1 * temp1) + (temp2 * temp2));
 
                 // compute the ratio of the actual to the predicted
@@ -483,7 +483,7 @@ c     **********
                 }
                 else
                 {
-                    if (!(par != 0.0 && ratio < 0.75))
+                    if (par == 0.0 || ratio >= 0.75)
                     {
                         delta = pnorm / 0.5;
                         par = 0.5 * par;
@@ -505,7 +505,7 @@ c     **********
                         fvec[i] = wa4[i];
                     }
 
-                    xnorm = EuclidianNorm(wa2);
+                    xnorm = EuclidianNorm(n, wa2);
                     fnorm = fnorm1;
                     iter++;
                 }
@@ -568,6 +568,7 @@ c     **********
     }
 
     private static void LevenbergMarquardtParameter(
+        int n,
         NumericMatrix<double> r,
         NumericVector<int> ipvt,
         NumericVector<double> diag,
@@ -691,7 +692,6 @@ c     **********
 
         // compute and store in x the gauss-newton direction. if the
         // jacobian is rank-deficient, obtain a least squares solution.
-        int n = r.NumberOfColumns;
         int nsing = n;
         for (int j = 1; j <= n; j++)
         {
@@ -740,7 +740,7 @@ c     **********
             wa2[j] = diag[j] * x[j];
         }
 
-        double dxnorm = EuclidianNorm(wa2);
+        double dxnorm = EuclidianNorm(n, wa2);
         double fp = dxnorm - delta;
         if (fp > 0.1 * delta)
         {
@@ -771,8 +771,8 @@ c     **********
                     wa1[j] = (wa1[j] - sum) / r[j, j];
                 }
 
-                double temp = EuclidianNorm(wa1);
-                parl = fp / delta / temp / temp;
+                double temp = EuclidianNorm(n, wa1);
+                parl = ((fp / delta) / temp) / temp;
             }
 
             // calculate an upper bound, paru, for the zero of the function.
@@ -788,7 +788,7 @@ c     **********
                 wa1[j] = sum / diag[l];
             }
 
-            double gnorm = EuclidianNorm(wa1);
+            double gnorm = EuclidianNorm(n, wa1);
             double paru = gnorm / delta;
             if (paru == 0.0)
             {
@@ -827,7 +827,7 @@ c     **********
                     wa2[j] = diag[j] * x[j];
                 }
 
-                dxnorm = EuclidianNorm(wa2);
+                dxnorm = EuclidianNorm(n, wa2);
                 temp = fp;
                 fp = dxnorm - delta;
 
@@ -862,8 +862,8 @@ c     **********
                     }
                 }
 
-                temp = EuclidianNorm(wa1);
-                double parc = fp / delta / temp / temp;
+                temp = EuclidianNorm(n, wa1);
+                double parc = ((fp / delta) / temp) / temp;
 
                 // depending on the sign of the function, update parl or paru.
                 if (fp > 0.0)
@@ -1091,7 +1091,7 @@ c     **********
                 int jp1 = j + 1;
                 if (nsing >= jp1)
                 {
-                    for (int i = jp1; j <= nsing; j++)
+                    for (int i = jp1; i <= nsing; i++)
                     {
                         sum += r[i, j] * wa[i];
                     }
@@ -1109,7 +1109,7 @@ c     **********
         }
     }
 
-    private static double EuclidianNorm(INumericVector<double> x)
+    internal static double EuclidianNorm(int n, INumericVector<double> x)
     {
         // Based on the subroutine enorm from MINPACK (see https://netlib.org/minpack/), ported to C#
 
@@ -1132,8 +1132,6 @@ c     **********
         // burton s.garbow, kenneth e.hillstrom, jorge j.more
         const double rdwarf = 3.834e-20;
         const double rgiant = 1.304e19;
-
-        int n = x.Length;
 
         double s1 = 0.0;
         double s2 = 0.0;
@@ -1257,6 +1255,8 @@ c     **********
     }
 
     private static void QRFactorization(
+        int m,
+        int n,
         ref NumericMatrix<double> a,
         bool pivot,
         ref NumericVector<int> ipvt,
@@ -1352,13 +1352,11 @@ c     **********
 
         // epsmch is the machine precision.
         double epsmch = MyMath.Epsilon;
-        int m = a.NumberOfRows;
-        int n = a.NumberOfColumns;
 
         // compute the initial column norms and initialize several arrays.
         for (int j = 1; j <= n; j++)
         {
-            acnorm[j] = EuclidianNorm(a.GetColumnVector(j));
+            acnorm[j] = EuclidianNorm(m, a.GetColumnVector(j));
             rdiag[j] = acnorm[j];
             wa[j] = rdiag[j];
             if (pivot)
@@ -1398,7 +1396,7 @@ c     **********
 
             // compute the householder transformation to reduce the
             // j-th column of a to a multiple of the j-th unit vector.
-            double ajnorm = EuclidianNorm(a.GetColumnVector(j, j));
+            double ajnorm = EuclidianNorm(m - j + 1, a.GetColumnVector(j, j));
             if (ajnorm != 0.0)
             {
                 if (a[j, j] < 0.0)
@@ -1438,7 +1436,7 @@ c     **********
                             rdiag[k] = rdiag[k] * Math.Sqrt(Math.Max(0.0, 1.0 - (temp * temp)));
                             if (5.0e-2 * Math.Pow(rdiag[k] / wa[k], 2) <= epsmch)
                             {
-                                rdiag[k] = EuclidianNorm(a.GetColumnVector(k, jp1));
+                                rdiag[k] = EuclidianNorm(m - j, a.GetColumnVector(k, jp1));
                                 wa[k] = rdiag[k];
                             }
                         }

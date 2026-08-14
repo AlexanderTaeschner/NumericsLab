@@ -26,34 +26,34 @@ internal sealed class NumericMatrix<T>
     /// <summary>
     /// Gets or sets the value of the element at the specified one-based row and column indices in the matrix.
     /// </summary>
-    /// <param name="row">The one-based row index of the element.</param>
-    /// <param name="column">The one-based column index of the element.</param>
+    /// <param name="oneBasedRowIndex">The one-based row index of the element.</param>
+    /// <param name="oneBasedColumnIndex">The one-based column index of the element.</param>
     /// <returns>The value of the element at the specified one-based row and column indices.</returns>
-    public T this[int row, int column]
+    public T this[int oneBasedRowIndex, int oneBasedColumnIndex]
     {
-        get => _matrix[row - 1, column - 1];
-        set => _matrix[row - 1, column - 1] = value;
+        get => _matrix[oneBasedRowIndex - 1, oneBasedColumnIndex - 1];
+        set => _matrix[oneBasedRowIndex - 1, oneBasedColumnIndex - 1] = value;
     }
 
-    internal INumericVector<T> GetColumnVector(int j, int startRowIndex = 1) => new ColumnVector(this, j, startRowIndex);
+    internal INumericVector<T> GetColumnVector(int oneBasedColumnIndex, int oneBasedStartRowIndex = 1) => new ColumnVector(this, oneBasedColumnIndex, oneBasedStartRowIndex);
 
-    private sealed class ColumnVector(NumericMatrix<T> numericMatrix, int columnIndex, int startRowIndex) : INumericVector<T>
+    private sealed class ColumnVector(NumericMatrix<T> numericMatrix, int oneBasedColumnIndex, int oneBasedStartRowIndex) : INumericVector<T>
     {
-        public int Length => numericMatrix.NumberOfRows - startRowIndex + 1;
+        public int Length => numericMatrix.NumberOfRows - oneBasedStartRowIndex + 1;
 
-        public T this[int index]
+        public T this[int oneBasedIndex]
         {
-            get => numericMatrix._matrix[index + startRowIndex - 2, columnIndex - 1];
-            set => numericMatrix._matrix[index + startRowIndex - 2, columnIndex - 1] = value;
+            get => numericMatrix._matrix[oneBasedIndex + oneBasedStartRowIndex - 2, oneBasedColumnIndex - 1];
+            set => numericMatrix._matrix[oneBasedIndex + oneBasedStartRowIndex - 2, oneBasedColumnIndex - 1] = value;
         }
 
-        public IReadOnlyList<T> AsReadOnlyList() => new ColumnList(this);
+        public IReadOnlyList<T> AsReadOnlyList() => new ReadOnlyColumnList(this);
 
-        private readonly struct ColumnList(NumericMatrix<T>.ColumnVector columnVector) : IReadOnlyList<T>
+        private readonly struct ReadOnlyColumnList(ColumnVector columnVector) : IReadOnlyList<T>
         {
             public int Count => columnVector.Length;
 
-            public readonly T this[int index] => columnVector[index + 1];
+            public readonly T this[int zeroBasedIndex] => columnVector[zeroBasedIndex + 1];
 
             public IEnumerator<T> GetEnumerator() => new ColumnEnumerator(columnVector);
 
@@ -61,9 +61,9 @@ internal sealed class NumericMatrix<T>
 
             private struct ColumnEnumerator(ColumnVector columnVector) : IEnumerator<T>
             {
-                private int _currentIndex = 1;
+                private int _currentZeroBasedIndex = 0;
 
-                public readonly T Current => columnVector[_currentIndex];
+                public readonly T Current => columnVector[_currentZeroBasedIndex];
 
 #pragma warning disable IDE0251 // Make member 'readonly'
                 object IEnumerator.Current => Current;
@@ -71,16 +71,16 @@ internal sealed class NumericMatrix<T>
 
                 public bool MoveNext()
                 {
-                    if (_currentIndex < columnVector.Length)
+                    if (_currentZeroBasedIndex < columnVector.Length)
                     {
-                        _currentIndex++;
+                        _currentZeroBasedIndex++;
                         return true;
                     }
 
                     return false;
                 }
 
-                public void Reset() => _currentIndex = 1;
+                public void Reset() => _currentZeroBasedIndex = 0;
 
 #pragma warning disable IDE0251 // Make member 'readonly'
                 public void Dispose()

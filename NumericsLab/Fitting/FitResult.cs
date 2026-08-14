@@ -10,12 +10,15 @@ public class FitResult
     {
         Info = (FitResultStatus)info;
         Parameters = x.AsReadOnlyList();
-        Residuals = fvec.AsReadOnlyList();
+        ////Residuals = fvec.AsReadOnlyList();
+        EuclidianNormOfResiduals = NonlinearLeastSquares.EuclidianNorm(fvec.Length, fvec);
     }
 
     public FitResultStatus Info { get; }
 
     public IReadOnlyList<double> Parameters { get; }
 
-    public IReadOnlyList<double> Residuals { get; }
+    ////public IReadOnlyList<double> Residuals { get; }
+
+    public double EuclidianNormOfResiduals { get; set; }
 }

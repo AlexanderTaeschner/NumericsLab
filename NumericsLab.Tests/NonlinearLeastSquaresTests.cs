@@ -19,6 +19,11 @@ public class NonlinearLeastSquaresTests
         double[] ydata = [0.14, 0.18, 0.22, 0.25, 0.29, 0.32, 0.35, 0.39, 0.37, 0.58, 0.73, 0.96, 1.34, 2.10, 4.39];
         double[] initialParams = [1.0, 1.0, 1.0];
 
-        var result = NonlinearLeastSquares.Fit(ExampleFunction, xdata, ydata, initialParams);
+        FitResult result = NonlinearLeastSquares.Fit(ExampleFunction, xdata, ydata, initialParams);
+        Assert.Equal(FitResultStatus.RelativeReductionsInSumOfSquaresAtMostFtoll, result.Info);
+        Assert.Equal(0.9063596e-01,result.EuclidianNormOfResiduals,9);
+        Assert.Equal(0.8241057e-01, result.Parameters[0],7);
+        Assert.Equal(0.1133037e+01, result.Parameters[1],6);
+        Assert.Equal(0.2343695e+01, result.Parameters[2],4);
     }
 }
