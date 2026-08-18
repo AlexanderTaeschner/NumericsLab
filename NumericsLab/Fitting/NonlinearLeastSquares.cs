@@ -15,10 +15,12 @@ namespace NumericsLab.Fitting;
 /// <returns>The value of the model function at the given x with the specified parameters.</returns>
 public delegate double ModelFunction(double x, IReadOnlyList<double> parameters);
 
+/// <summary>
+/// Provides methods for performing nonlinear least squares fitting using the Levenberg-Marquardt algorithm.
+/// </summary>
 public static class NonlinearLeastSquares
 {
     private static readonly double EpsForwardDifferenceJacobian = Math.Sqrt(MyMath.Epsilon); // lmdif1 uses epsfcn=0, so we simpilify the max(epsfcn, epsmch) to just epsmch here.
-
 
     /// <summary>
     /// Represents a function that computes the residuals for nonlinear least squares fitting.
@@ -29,6 +31,15 @@ public static class NonlinearLeastSquares
     /// In case the function values vector is null at the time of the call, a new NumericVector will be created inside this function.</param>
     private delegate void NLSFunction(NumericVector<double> parameters, [NotNull] ref NumericVector<double>? functionValues);
 
+    /// <summary>
+    /// Fits the specified model function to the given data using the Levenberg-Marquardt algorithm.
+    /// </summary>
+    /// <param name="model">The model function to fit.</param>
+    /// <param name="xdata">The independent variable data.</param>
+    /// <param name="ydata">The dependent variable data.</param>
+    /// <param name="initialParameters">The initial guess for the parameters.</param>
+    /// <param name="tolerance">The tolerance for the fitting algorithm.</param>
+    /// <returns>The result of the fit.</returns>
     public static FitResult Fit(ModelFunction model, double[] xdata, double[] ydata, double[] initialParameters, double tolerance = MyMath.EpsilonSqrt)
     {
         void ResidualFunction(NumericVector<double> parameters, [NotNull] ref NumericVector<double>? functionValues)
@@ -44,6 +55,109 @@ public static class NonlinearLeastSquares
         NumericVector<double> x = new([.. initialParameters]); // initialize x with a copy of the initial parameters
         int maxfev = 200 * (x.Length + 1);
         return LevenbergMarquardt(ResidualFunction, x, ftol: tolerance, xtol: tolerance, gtol: 0.0, maxfev);
+    }
+
+    internal static double EuclidianNorm(int n, INumericVector<double> x)
+    {
+        // Based on the subroutine enorm from MINPACK (see https://netlib.org/minpack/), ported to C#
+
+        // given an n-vector x, this function calculates the
+        // euclidean norm of x.
+        //
+        // the euclidean norm is computed by accumulating the sum of
+        // squares in three different sums.the sums of squares for the
+        // small and large components are scaled so that no overflows
+        // occur.non - destructive underflows are permitted.underflows
+        // and overflows do not occur in the computation of the unscaled
+        // sum of squares for the intermediate components.
+        // the definitions of small, intermediate and large components
+        // depend on two constants, rdwarf and rgiant.the main
+        // restrictions on these constants are that rdwarf * *2 not
+        // underflow and rgiant * *2 not overflow.the constants
+        // given here are suitable for every known computer.
+        //
+        // argonne national laboratory.minpack project.march 1980.
+        // burton s.garbow, kenneth e.hillstrom, jorge j.more
+        const double rdwarf = 3.834e-20;
+        const double rgiant = 1.304e19;
+
+        double s1 = 0.0;
+        double s2 = 0.0;
+        double s3 = 0.0;
+        double x1max = 0.0;
+        double x3max = 0.0;
+        double floatn = n;
+        double agiant = rgiant / floatn;
+
+        for (int i = 1; i <= n; i++)
+        {
+            double xabs = Math.Abs(x[i]);
+            if (xabs > rdwarf && xabs < agiant)
+            {
+                // sum for intermediate components
+                s2 += xabs * xabs;
+            }
+            else
+            {
+                if (xabs <= rdwarf)
+                {
+                    // sum for small components.
+                    if (xabs <= x3max)
+                    {
+                        if (xabs != 0.0)
+                        {
+                            s3 += Math.Pow(xabs / x3max, 2);
+                        }
+                    }
+                    else
+                    {
+                        s3 = 1.0 + (s3 * Math.Pow(x3max / xabs, 2));
+                        x3max = xabs;
+                    }
+                }
+                else
+                {
+                    // sum for large components.
+                    if (xabs <= x1max)
+                    {
+                        s1 += Math.Pow(xabs / x1max, 2);
+                    }
+                    else
+                    {
+                        s1 = 1.0 + (s1 * Math.Pow(x1max / xabs, 2));
+                        x1max = xabs;
+                    }
+                }
+            }
+        }
+
+        // calculation of norm.
+        double enorm;
+        if (s1 != 0.0)
+        {
+            enorm = x1max * Math.Sqrt(s1 + (s2 / x1max / x1max));
+        }
+        else
+        {
+            if (s2 == 0.0)
+            {
+                enorm = x3max * Math.Sqrt(s3);
+                return enorm;
+            }
+            else
+            {
+                if (s2 >= x3max)
+                {
+                    enorm = Math.Sqrt(s2 * (1.0 + (x3max / s2 * (x3max * s3))));
+                }
+                else
+                {
+                    enorm = Math.Sqrt(x3max * ((s2 / x3max) + (x3max * s3)));
+                }
+            }
+        }
+
+        return enorm;
     }
 
     private static FitResult LevenbergMarquardt(
@@ -384,7 +498,7 @@ c     **********
 
             if (info != 0)
             {
-                return new FitResult(info, x, fvec);
+                return new FitResult(info, x, fvec, fjac, ipvt);
             }
 
             // rescale if necessary.
@@ -529,7 +643,7 @@ c     **********
 
                 if (info != 0)
                 {
-                    return new(info, x, fvec);
+                    return new(info, x, fvec, fjac, ipvt);
                 }
 
                 // tests for termination and stringent tolerances.
@@ -555,7 +669,7 @@ c     **********
 
                 if (info != 0)
                 {
-                    return new(info, x, fvec);
+                    return new(info, x, fvec, fjac, ipvt);
                 }
 
                 // end of the inner loop.repeat if iteration unsuccessful.
@@ -1107,109 +1221,6 @@ c     **********
             int l = ipvt[j];
             x[l] = wa[j];
         }
-    }
-
-    internal static double EuclidianNorm(int n, INumericVector<double> x)
-    {
-        // Based on the subroutine enorm from MINPACK (see https://netlib.org/minpack/), ported to C#
-
-        // given an n-vector x, this function calculates the
-        // euclidean norm of x.
-        //
-        // the euclidean norm is computed by accumulating the sum of
-        // squares in three different sums.the sums of squares for the
-        // small and large components are scaled so that no overflows
-        // occur.non - destructive underflows are permitted.underflows
-        // and overflows do not occur in the computation of the unscaled
-        // sum of squares for the intermediate components.
-        // the definitions of small, intermediate and large components
-        // depend on two constants, rdwarf and rgiant.the main
-        // restrictions on these constants are that rdwarf * *2 not
-        // underflow and rgiant * *2 not overflow.the constants
-        // given here are suitable for every known computer.
-        //
-        // argonne national laboratory.minpack project.march 1980.
-        // burton s.garbow, kenneth e.hillstrom, jorge j.more
-        const double rdwarf = 3.834e-20;
-        const double rgiant = 1.304e19;
-
-        double s1 = 0.0;
-        double s2 = 0.0;
-        double s3 = 0.0;
-        double x1max = 0.0;
-        double x3max = 0.0;
-        double floatn = n;
-        double agiant = rgiant / floatn;
-
-        for (int i = 1; i <= n; i++)
-        {
-            double xabs = Math.Abs(x[i]);
-            if (xabs > rdwarf && xabs < agiant)
-            {
-                // sum for intermediate components
-                s2 += xabs * xabs;
-            }
-            else
-            {
-                if (xabs <= rdwarf)
-                {
-                    // sum for small components.
-                    if (xabs <= x3max)
-                    {
-                        if (xabs != 0.0)
-                        {
-                            s3 += Math.Pow(xabs / x3max, 2);
-                        }
-                    }
-                    else
-                    {
-                        s3 = 1.0 + (s3 * Math.Pow(x3max / xabs, 2));
-                        x3max = xabs;
-                    }
-                }
-                else
-                {
-                    // sum for large components.
-                    if (xabs <= x1max)
-                    {
-                        s1 += Math.Pow(xabs / x1max, 2);
-                    }
-                    else
-                    {
-                        s1 = 1.0 + (s1 * Math.Pow(x1max / xabs, 2));
-                        x1max = xabs;
-                    }
-                }
-            }
-        }
-
-        // calculation of norm.
-        double enorm;
-        if (s1 != 0.0)
-        {
-            enorm = x1max * Math.Sqrt(s1 + (s2 / x1max / x1max));
-        }
-        else
-        {
-            if (s2 == 0.0)
-            {
-                enorm = x3max * Math.Sqrt(s3);
-                return enorm;
-            }
-            else
-            {
-                if (s2 >= x3max)
-                {
-                    enorm = Math.Sqrt(s2 * (1.0 + (x3max / s2 * (x3max * s3))));
-                }
-                else
-                {
-                    enorm = Math.Sqrt(x3max * ((s2 / x3max) + (x3max * s3)));
-                }
-            }
-        }
-
-        return enorm;
     }
 
     private static void ForwardDifferenceJacobian(NLSFunction function, NumericVector<double> x, NumericVector<double> fvec, ref NumericMatrix<double> fjac)

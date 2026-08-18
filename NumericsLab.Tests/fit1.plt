@@ -8,4 +8,8 @@ x1 = 1
 x2 = 1
 x3 = 1
 
+
+set fit noerrorscaling errorvariables covariancevariables
+fit f(x) 'fit1.dat' via x1,x2,x3
+
 plot 'fit1.dat', f(x)

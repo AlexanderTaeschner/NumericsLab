@@ -21,9 +21,27 @@ public class NonlinearLeastSquaresTests
 
         FitResult result = NonlinearLeastSquares.Fit(ExampleFunction, xdata, ydata, initialParams);
         Assert.Equal(FitResultStatus.RelativeReductionsInSumOfSquaresAtMostFtoll, result.Info);
-        Assert.Equal(0.9063596e-01,result.EuclidianNormOfResiduals,9);
-        Assert.Equal(0.8241057e-01, result.Parameters[0],7);
-        Assert.Equal(0.1133037e+01, result.Parameters[1],6);
-        Assert.Equal(0.2343695e+01, result.Parameters[2],4);
+        Assert.Equal(0.9063596e-01,result.EuclidianNormOfResiduals,9); // number from file06 of https://netlib.org/minpack/ex/
+        Assert.Equal(0.8241057e-01, result.Parameters[0],7); // number from file06 of https://netlib.org/minpack/ex/
+        Assert.Equal(0.1133037e+01, result.Parameters[1],6); // number from file06 of https://netlib.org/minpack/ex/
+        Assert.Equal(0.2343695e+01, result.Parameters[2],4); // number from file06 of https://netlib.org/minpack/ex/
+        Assert.Equal(0.0261643480503795, result.EstimatedStandardDeviationOfFit, 9); // number from gnuplot fit
+        IReadOnlyMatrix<double> covarianceMatrix = result.GetCovarianceMatrix(true);
+        Assert.Equal(3, covarianceMatrix.NumberOfRows);
+        Assert.Equal(3, covarianceMatrix.NumberOfColumns);
+        Assert.Equal(0.000153120891007205, covarianceMatrix[0, 0], 7); // number from gnuplot fit
+        Assert.Equal(0.00287232957086124, covarianceMatrix[0, 1], 5); // number from gnuplot fit
+        Assert.Equal(0.00287232957086124, covarianceMatrix[1, 0], 5); // number from gnuplot fit
+        Assert.Equal(0.0949673479311945, covarianceMatrix[1, 1], 3); // number from gnuplot fit
+        Assert.Equal(-0.00265990524494864, covarianceMatrix[0, 2], 5); // number from gnuplot fit
+        Assert.Equal(-0.00265990524494864, covarianceMatrix[2, 0], 5); // number from gnuplot fit
+        Assert.Equal(-0.0911752995397185, covarianceMatrix[2, 1], 3); // number from gnuplot fit
+        Assert.Equal(-0.0911752995397185, covarianceMatrix[1, 2], 3); // number from gnuplot fit
+        Assert.Equal(0.0879981606994613, covarianceMatrix[2, 2], 3); // number from gnuplot fit
+        IReadOnlyList<double> parameterStdDev = result.GetParameterStandardDeviation(true);
+        Assert.Equal(3, parameterStdDev.Count);
+        Assert.Equal(0.0123742026412697, parameterStdDev[0], 7); // number from gnuplot fit
+        Assert.Equal(0.308167726946211, parameterStdDev[1], 3); // number from gnuplot fit
+        Assert.Equal(0.296644839327202, parameterStdDev[2], 2); // number from gnuplot fit
     }
 }

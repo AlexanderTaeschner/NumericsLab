@@ -7,21 +7,19 @@ using System.Numerics;
 
 namespace NumericsLab.Internals;
 
-internal sealed class NumericMatrix<T>
+internal sealed class NumericMatrix<T>(T[,] matrix)
     where T : INumber<T>
 {
-    private readonly T[,] _matrix;
+    private readonly T[,] _matrix = matrix;
 
     public NumericMatrix(int numberOfRows, int numberOfColumns)
+        : this(new T[numberOfRows, numberOfColumns])
     {
-        _matrix = new T[numberOfRows, numberOfColumns];
-        NumberOfRows = numberOfRows;
-        NumberOfColumns = numberOfColumns;
     }
 
-    public int NumberOfRows { get; }
+    public int NumberOfRows { get; } = matrix.GetLength(0);
 
-    public int NumberOfColumns { get; }
+    public int NumberOfColumns { get; } = matrix.GetLength(1);
 
     /// <summary>
     /// Gets or sets the value of the element at the specified one-based row and column indices in the matrix.
