@@ -17,7 +17,7 @@ branches:
   only:
   - main
 
-version: 0.0.1.5-{build}
+version: 0.0.1.6-{build}
 
 artifacts:
   - path: '**\*.nupkg'

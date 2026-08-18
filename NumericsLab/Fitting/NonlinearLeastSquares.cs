@@ -40,13 +40,13 @@ public static class NonlinearLeastSquares
     /// <param name="initialParameters">The initial guess for the parameters.</param>
     /// <param name="tolerance">The tolerance for the fitting algorithm.</param>
     /// <returns>The result of the fit.</returns>
-    public static FitResult Fit(ModelFunction model, double[] xdata, double[] ydata, double[] initialParameters, double tolerance = MyMath.EpsilonSqrt)
+    public static FitResult Fit(ModelFunction model, IReadOnlyList<double> xdata, IReadOnlyList<double> ydata, IReadOnlyList<double> initialParameters, double tolerance = MyMath.EpsilonSqrt)
     {
         void ResidualFunction(NumericVector<double> parameters, [NotNull] ref NumericVector<double>? functionValues)
         {
-            functionValues ??= new NumericVector<double>(xdata.Length);
+            functionValues ??= new NumericVector<double>(xdata.Count);
 
-            for (int i = 0; i < xdata.Length; i++)
+            for (int i = 0; i < xdata.Count; i++)
             {
                 functionValues.SetArrayElement(i, ydata[i] - model(xdata[i], parameters.AsReadOnlyList()));
             }
