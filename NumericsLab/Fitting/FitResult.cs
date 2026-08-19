@@ -9,7 +9,7 @@ namespace NumericsLab.Fitting;
 /// <summary>
 /// Represents the result of a nonlinear least squares fitting operation, including fitted parameters, residuals, and statistical information about the fit.
 /// </summary>
-public class FitResult
+public sealed class FitResult
 {
     private readonly double[,] _covarianceMatrix;
     private readonly double[] _parameterStandardDeviation;
@@ -83,10 +83,8 @@ public class FitResult
 
             return new ReadOnlyMatrix<double>(scaledCovarianceMatrix);
         }
-        else
-        {
-            return new ReadOnlyMatrix<double>(_covarianceMatrix);
-        }
+
+        return new ReadOnlyMatrix<double>(_covarianceMatrix);
     }
 
     /// <summary>
@@ -107,10 +105,8 @@ public class FitResult
 
             return scaledParameterStandardDeviation;
         }
-        else
-        {
-            return _parameterStandardDeviation;
-        }
+
+        return _parameterStandardDeviation;
     }
 
     private static double[,] CalculateCovarianceMatrix(int n, NumericMatrix<double> fjac, NumericVector<int> ipvt)

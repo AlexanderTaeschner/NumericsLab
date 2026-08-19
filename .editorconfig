@@ -252,6 +252,15 @@ dotnet_diagnostic.SA1309.severity = none
 # IDE0047: Remove unnecessary parentheses
 dotnet_diagnostic.IDE0047.severity = silent
 
+# MA0051: Method is too long
+dotnet_diagnostic.MA0051.severity = none
+
+# MA0048: File name must match type name
+dotnet_diagnostic.MA0048.severity = none
+
+# MA0015: Specify the parameter name in ArgumentException
+dotnet_diagnostic.MA0015.severity = none
+
 [*.{cs,vb}]
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 tab_width = 4

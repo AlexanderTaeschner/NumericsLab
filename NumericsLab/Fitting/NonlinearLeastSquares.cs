@@ -144,16 +144,14 @@ public static class NonlinearLeastSquares
                 enorm = x3max * Math.Sqrt(s3);
                 return enorm;
             }
+
+            if (s2 >= x3max)
+            {
+                enorm = Math.Sqrt(s2 * (1.0 + (x3max / s2 * (x3max * s3))));
+            }
             else
             {
-                if (s2 >= x3max)
-                {
-                    enorm = Math.Sqrt(s2 * (1.0 + (x3max / s2 * (x3max * s3))));
-                }
-                else
-                {
-                    enorm = Math.Sqrt(x3max * ((s2 / x3max) + (x3max * s3)));
-                }
+                enorm = Math.Sqrt(x3max * ((s2 / x3max) + (x3max * s3)));
             }
         }
 
@@ -410,7 +408,7 @@ c     **********
             nfev += n;
 
             // compute the qr factorization of the jacobian.
-            QRFactorization(m, n, ref fjac, true, ref ipvt, ref wa1, ref wa2, ref wa3);
+            QRFactorization(m, n, ref fjac, pivot: true, ref ipvt, ref wa1, ref wa2, ref wa3);
 
             // on the first iteration and if mode is 1, scale according
             // to the norms of the columns of the initial jacobian.

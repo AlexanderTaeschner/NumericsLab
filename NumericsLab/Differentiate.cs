@@ -9,7 +9,7 @@ namespace NumericsLab;
 /// <summary>
 /// Provides methods for numerical differentiation of one-dimensional functions.
 /// </summary>
-public sealed class Differentiate
+public static class Differentiate
 {
     private static readonly double BaseStepSize = Math.Pow(MyMath.Epsilon, 1.0 / 3.0);
 
