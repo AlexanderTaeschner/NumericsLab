@@ -1,0 +1,434 @@
+﻿//--------------------------------------------------------------------------
+// <copyright file="BetaFunction.cs" company="Alexander Täschner">
+// Copyright (c) Alexander Täschner. All rights reserved.
+// </copyright>
+//--------------------------------------------------------------------------
+
+namespace NumericsLab;
+
+/// <summary>
+/// Class providing special mathematical functions.
+/// </summary>
+public static partial class SpecialFunctions
+{
+    /*                          incbet.c
+     *
+     *  Incomplete beta integral
+     *
+     *
+     * SYNOPSIS:
+     *
+     * double a, b, x, y, incbet();
+     *
+     * y = incbet( a, b, x );
+     *
+     *
+     * DESCRIPTION:
+     *
+     * Returns incomplete beta integral of the arguments, evaluated
+     * from zero to x.  The function is defined as
+     *
+     *                  x
+     *     -            -
+     *    | (a+b)      | |  a-1     b-1
+     *  -----------    |   t   (1-t)   dt.
+     *   -     -     | |
+     *  | (a) | (b)   -
+     *                 0
+     *
+     * The domain of definition is 0 <= x <= 1.  In this
+     * implementation a and b are restricted to positive values.
+     * The integral from x to 1 may be obtained by the symmetry
+     * relation
+     *
+     *    1 - incbet( a, b, x )  =  incbet( b, a, 1-x ).
+     *
+     * The integral is evaluated by a continued fraction expansion
+     * or, when b*x is small, by a power series.
+     *
+     * ACCURACY:
+     *
+     * Tested at uniformly distributed random points (a,b,x) with a and b
+     * in "domain" and x between 0 and 1.
+     *                                        Relative error
+     * arithmetic   domain     # trials      peak         rms
+     *    IEEE      0,5         10000       6.9e-15     4.5e-16
+     *    IEEE      0,85       250000       2.2e-13     1.7e-14
+     *    IEEE      0,1000      30000       5.3e-12     6.3e-13
+     *    IEEE      0,10000    250000       9.3e-11     7.1e-12
+     *    IEEE      0,100000    10000       8.7e-10     4.8e-11
+     * Outputs smaller than the IEEE gradual underflow threshold
+     * were excluded from these statistics.
+     *
+     * ERROR MESSAGES:
+     *   message         condition      value returned
+     * incbet domain      x<0, x>1          0.0
+     * incbet underflow                     0.0
+     */
+
+    /*
+    Cephes Math Library, Release 2.8:  June, 2000
+    Copyright 1984, 1995, 2000 by Stephen L. Moshier
+    */
+    /*
+    #include "mconf.h"
+
+     */
+    private const double MAXGAM = 171.624376956302725;
+
+    /// <summary>
+    /// Returns incomplete beta integral of the arguments, evaluated
+    ///  from zero to x.The function is defined as
+    ///
+    ///                  x
+    ///     -            -
+    ///    | (a+b)      | |  a-1     b-1
+    ///  -----------    |   t(1-t)   dt.
+    ///   -     -     | |
+    ///  | (a) | (b)   -
+    ///                0
+    ///
+    ///  The domain of definition is 0 &lt;= x &lt;= 1.  In this
+    ///  implementation a and b are restricted to positive values.
+    ///  The integral from x to 1 may be obtained by the symmetry
+    ///  relation
+    ///
+    ///     1 - incbet(a, b, x)  = incbet(b, a, 1 - x).
+    ///
+    /// The integral is evaluated by a continued fraction expansion
+    ///  or, when b*x is small, by a power series.
+    /// </summary>
+    /// <param name="aa">The parameter a.</param>
+    /// <param name="bb">The parameter b.</param>
+    /// <param name="xx">The parameter x.</param>
+    /// <returns>Incomplete beta integral of the arguments.</returns>
+    public static double IncompleteBetaIntegral(double aa, double bb, double xx)
+    {
+        double a, b, t, x, xc, w, y;
+        int flag;
+
+        if (aa <= 0.0 || bb <= 0.0)
+        {
+            ////goto domerr;
+            return 0.0;
+        }
+
+        if (xx is <= 0.0 or >= 1.0)
+        {
+            if (xx == 0.0)
+            {
+                return 0.0;
+            }
+
+            if (xx == 1.0)
+            {
+                return 1.0;
+            }
+            ////domerr:
+            ////mtherr( "incbet", DOMAIN );
+            return 0.0;
+        }
+
+        flag = 0;
+        if ((bb * xx) <= 1.0 && xx <= 0.95)
+        {
+            t = Pseries(aa, bb, xx);
+            goto done;
+        }
+
+        w = 1.0 - xx;
+
+        /* Reverse a and b if x is greater than the mean. */
+        if (xx > (aa / (aa + bb)))
+        {
+            flag = 1;
+            a = bb;
+            b = aa;
+            xc = xx;
+            x = w;
+        }
+        else
+        {
+            a = aa;
+            b = bb;
+            xc = w;
+            x = xx;
+        }
+
+        if (flag == 1 && (b * x) <= 1.0 && x <= 0.95)
+        {
+            t = Pseries(a, b, x);
+            goto done;
+        }
+
+        /* Choose expansion for better convergence. */
+        y = (x * (a + b - 2.0)) - (a - 1.0);
+        w = y < 0.0 ? Incbcf(a, b, x) : Incbd(a, b, x) / xc;
+
+        /* Multiply w by the factor
+             a      b   _             _     _
+            x  (1-x)   | (a+b) / ( a | (a) | (b) ) .   */
+
+        y = a * Math.Log(x);
+        t = b * Math.Log(xc);
+        if ((a + b) < MAXGAM && Math.Abs(y) < MAXLOG && Math.Abs(t) < MAXLOG)
+        {
+            t = Math.Pow(xc, b);
+            t *= Math.Pow(x, a);
+            t /= a;
+            t *= w;
+            t *= GammaFunction(a + b) / (GammaFunction(a) * GammaFunction(b));
+            goto done;
+        }
+
+        /* Resort to logarithms.  */
+        y += t + LogarithmicGammaFunction(a + b) - LogarithmicGammaFunction(a) - LogarithmicGammaFunction(b);
+        y += Math.Log(w / a);
+        t = y < MINLOG ? 0.0 : Math.Exp(y);
+
+done:
+
+        if (flag == 1)
+        {
+            t = t <= MACHEP ? 1.0 - MACHEP : 1.0 - t;
+        }
+
+        return t;
+    }
+
+    /* Continued fraction expansion #1
+     * for incomplete beta integral
+     */
+
+    private static double Incbcf(double a, double b, double x)
+    {
+        double xk, pk, pkm1, pkm2, qk, qkm1, qkm2;
+        double k1, k2, k3, k4, k5, k6, k7, k8;
+        double r, t, ans, thresh;
+        int n;
+
+        k1 = a;
+        k2 = a + b;
+        k3 = a;
+        k4 = a + 1.0;
+        k5 = 1.0;
+        k6 = b - 1.0;
+        k7 = k4;
+        k8 = a + 2.0;
+
+        pkm2 = 0.0;
+        qkm2 = 1.0;
+        pkm1 = 1.0;
+        qkm1 = 1.0;
+        ans = 1.0;
+        r = 1.0;
+        n = 0;
+        thresh = 3.0 * MACHEP;
+        do
+        {
+            xk = -(x * k1 * k2) / (k3 * k4);
+            pk = pkm1 + (pkm2 * xk);
+            qk = qkm1 + (qkm2 * xk);
+            pkm2 = pkm1;
+            pkm1 = pk;
+            qkm2 = qkm1;
+            qkm1 = qk;
+
+            xk = x * k5 * k6 / (k7 * k8);
+            pk = pkm1 + (pkm2 * xk);
+            qk = qkm1 + (qkm2 * xk);
+            pkm2 = pkm1;
+            pkm1 = pk;
+            qkm2 = qkm1;
+            qkm1 = qk;
+
+            if (qk != 0)
+            {
+                r = pk / qk;
+            }
+
+            if (r != 0)
+            {
+                t = Math.Abs((ans - r) / r);
+                ans = r;
+            }
+            else
+            {
+                t = 1.0;
+            }
+
+            if (t < thresh)
+            {
+                goto cdone;
+            }
+
+            k1 += 1.0;
+            k2 += 1.0;
+            k3 += 2.0;
+            k4 += 2.0;
+            k5 += 1.0;
+            k6 -= 1.0;
+            k7 += 2.0;
+            k8 += 2.0;
+
+            if ((Math.Abs(qk) + Math.Abs(pk)) > Big)
+            {
+                pkm2 *= Biginv;
+                pkm1 *= Biginv;
+                qkm2 *= Biginv;
+                qkm1 *= Biginv;
+            }
+
+            if ((Math.Abs(qk) < Biginv) || (Math.Abs(pk) < Biginv))
+            {
+                pkm2 *= Big;
+                pkm1 *= Big;
+                qkm2 *= Big;
+                qkm1 *= Big;
+            }
+        }
+        while (++n < 300);
+
+cdone:
+        return ans;
+    }
+
+    /* Continued fraction expansion #2
+     * for incomplete beta integral
+     */
+
+    private static double Incbd(double a, double b, double x)
+    {
+        double xk, pk, pkm1, pkm2, qk, qkm1, qkm2;
+        double k1, k2, k3, k4, k5, k6, k7, k8;
+        double r, t, ans, z, thresh;
+        int n;
+
+        k1 = a;
+        k2 = b - 1.0;
+        k3 = a;
+        k4 = a + 1.0;
+        k5 = 1.0;
+        k6 = a + b;
+        k7 = a + 1.0;
+        k8 = a + 2.0;
+
+        pkm2 = 0.0;
+        qkm2 = 1.0;
+        pkm1 = 1.0;
+        qkm1 = 1.0;
+        z = x / (1.0 - x);
+        ans = 1.0;
+        r = 1.0;
+        n = 0;
+        thresh = 3.0 * MACHEP;
+        do
+        {
+            xk = -(z * k1 * k2) / (k3 * k4);
+            pk = pkm1 + (pkm2 * xk);
+            qk = qkm1 + (qkm2 * xk);
+            pkm2 = pkm1;
+            pkm1 = pk;
+            qkm2 = qkm1;
+            qkm1 = qk;
+
+            xk = z * k5 * k6 / (k7 * k8);
+            pk = pkm1 + (pkm2 * xk);
+            qk = qkm1 + (qkm2 * xk);
+            pkm2 = pkm1;
+            pkm1 = pk;
+            qkm2 = qkm1;
+            qkm1 = qk;
+
+            if (qk != 0)
+            {
+                r = pk / qk;
+            }
+
+            if (r != 0)
+            {
+                t = Math.Abs((ans - r) / r);
+                ans = r;
+            }
+            else
+            {
+                t = 1.0;
+            }
+
+            if (t < thresh)
+            {
+                goto cdone;
+            }
+
+            k1 += 1.0;
+            k2 -= 1.0;
+            k3 += 2.0;
+            k4 += 2.0;
+            k5 += 1.0;
+            k6 += 1.0;
+            k7 += 2.0;
+            k8 += 2.0;
+
+            if ((Math.Abs(qk) + Math.Abs(pk)) > Big)
+            {
+                pkm2 *= Biginv;
+                pkm1 *= Biginv;
+                qkm2 *= Biginv;
+                qkm1 *= Biginv;
+            }
+
+            if ((Math.Abs(qk) < Biginv) || (Math.Abs(pk) < Biginv))
+            {
+                pkm2 *= Big;
+                pkm1 *= Big;
+                qkm2 *= Big;
+                qkm1 *= Big;
+            }
+        }
+        while (++n < 300);
+cdone:
+        return ans;
+    }
+
+    /* Power series for incomplete beta integral.
+       Use when b*x is small and x not too close to 1.  */
+
+    private static double Pseries(double a, double b, double x)
+    {
+        double s, t, u, v, n, t1, z, ai;
+
+        ai = 1.0 / a;
+        u = (1.0 - b) * x;
+        v = u / (a + 1.0);
+        t1 = v;
+        t = u;
+        n = 2.0;
+        s = 0.0;
+        z = MACHEP * ai;
+        while (Math.Abs(v) > z)
+        {
+            u = (n - b) * x / n;
+            t *= u;
+            v = t / (a + n);
+            s += v;
+            n += 1.0;
+        }
+
+        s += t1;
+        s += ai;
+
+        u = a * Math.Log(x);
+        if ((a + b) < MAXGAM && Math.Abs(u) < MAXLOG)
+        {
+            t = GammaFunction(a + b) / (GammaFunction(a) * GammaFunction(b));
+            s = s * t * Math.Pow(x, a);
+        }
+        else
+        {
+            t = LogarithmicGammaFunction(a + b) - LogarithmicGammaFunction(a) - LogarithmicGammaFunction(b) + u + Math.Log(s);
+            s = t < MINLOG ? 0.0 : Math.Exp(t);
+        }
+
+        return s;
+    }
+}
