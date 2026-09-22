@@ -1,4 +1,5 @@
-﻿using NumericsLab.Fitting;
+﻿using System.Reflection;
+using NumericsLab.Fitting;
 
 namespace NumericsLab.Tests;
 
@@ -21,10 +22,10 @@ public class NonlinearLeastSquaresTests
 
         FitResult result = NonlinearLeastSquares.Fit(ExampleFunction, xdata, ydata, initialParams);
         Assert.Equal(FitResultStatus.RelativeReductionsInSumOfSquaresAtMostFtoll, result.Info);
-        Assert.Equal(0.9063596e-01,result.EuclidianNormOfResiduals,9); // number from file06 of https://netlib.org/minpack/ex/
-        Assert.Equal(0.8241057e-01, result.Parameters[0],7); // number from file06 of https://netlib.org/minpack/ex/
-        Assert.Equal(0.1133037e+01, result.Parameters[1],6); // number from file06 of https://netlib.org/minpack/ex/
-        Assert.Equal(0.2343695e+01, result.Parameters[2],4); // number from file06 of https://netlib.org/minpack/ex/
+        Assert.Equal(0.9063596e-01, result.EuclidianNormOfResiduals, 9); // number from file06 of https://netlib.org/minpack/ex/
+        Assert.Equal(0.8241057e-01, result.Parameters[0], 7); // number from file06 of https://netlib.org/minpack/ex/
+        Assert.Equal(0.1133037e+01, result.Parameters[1], 6); // number from file06 of https://netlib.org/minpack/ex/
+        Assert.Equal(0.2343695e+01, result.Parameters[2], 4); // number from file06 of https://netlib.org/minpack/ex/
         Assert.Equal(0.0261643480503795, result.EstimatedStandardDeviationOfFit, 9); // number from gnuplot fit
         IReadOnlyMatrix<double> covarianceMatrix = result.GetCovarianceMatrix(true);
         Assert.Equal(3, covarianceMatrix.NumberOfRows);
@@ -43,5 +44,51 @@ public class NonlinearLeastSquaresTests
         Assert.Equal(0.0123742026412697, parameterStdDev[0], 7); // number from gnuplot fit
         Assert.Equal(0.308167726946211, parameterStdDev[1], 3); // number from gnuplot fit
         Assert.Equal(0.296644839327202, parameterStdDev[2], 2); // number from gnuplot fit
+    }
+
+    [Fact]
+    public void EuclidianNorm_ReturnsExpectedNorm_ForIntermediateComponents()
+    {
+        double norm = InvokeEuclidianNorm(3.0, 4.0);
+
+        Assert.Equal(5.0, norm, 12);
+    }
+
+    [Fact]
+    public void EuclidianNorm_ReturnsExpectedNorm_ForVerySmallComponents()
+    {
+        double norm = InvokeEuclidianNorm(1e-30, 2e-30);
+
+        Assert.Equal(Math.Sqrt(5) * 1e-30, norm, tolerance: 1e-45);
+    }
+
+    [Fact]
+    public void EuclidianNorm_ReturnsExpectedNorm_ForVeryLargeComponents()
+    {
+        double norm = InvokeEuclidianNorm(1e20, 2e20);
+
+        Assert.Equal(Math.Sqrt(5) * 1e20, norm, 4);
+    }
+
+    [Fact]
+    public void EuclidianNorm_ReturnsExpectedNorm_ForMixedSmallAndIntermediateComponents()
+    {
+        double norm = InvokeEuclidianNorm(1e-20, 1e-19);
+
+        Assert.Equal(Math.Sqrt((1e-20 * 1e-20) + (1e-19 * 1e-19)), norm, tolerance: 1e-34);
+    }
+
+    private static double InvokeEuclidianNorm(params double[] values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+
+        Assembly numericsLabAssembly = typeof(NonlinearLeastSquares).Assembly;
+        Type numericVectorType = numericsLabAssembly.GetType("NumericsLab.Internals.NumericVector`1")!.MakeGenericType(typeof(double));
+        object numericVector = Activator.CreateInstance(numericVectorType, [values])!;
+
+        MethodInfo euclidianNormMethod = typeof(NonlinearLeastSquares).GetMethod("EuclidianNorm", BindingFlags.Static | BindingFlags.NonPublic)!;
+        object? result = euclidianNormMethod.Invoke(null, [values.Length, numericVector]);
+
+        return Assert.IsType<double>(result);
     }
 }
