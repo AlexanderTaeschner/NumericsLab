@@ -1,4 +1,5 @@
 using NumericsLab.RootFinding;
+using Xunit;
 
 namespace NumericsLab.Tests;
 

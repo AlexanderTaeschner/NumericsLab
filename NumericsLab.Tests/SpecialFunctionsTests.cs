@@ -1,4 +1,6 @@
-﻿namespace NumericsLab.Tests;
+﻿using Xunit;
+
+namespace NumericsLab.Tests;
 
 public class SpecialFunctionsTests
 {

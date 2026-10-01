@@ -1,4 +1,5 @@
 ﻿using NumericsLab.Interpolation;
+using Xunit;
 
 namespace NumericsLab.Tests;
 

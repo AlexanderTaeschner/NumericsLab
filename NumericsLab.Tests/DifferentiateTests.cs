@@ -1,4 +1,5 @@
 ﻿using NumericsLab;
+using Xunit;
 
 namespace NumericsLab.Tests;
 

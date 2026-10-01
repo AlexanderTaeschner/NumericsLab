@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using NumericsLab.Fitting;
+using Xunit;
 
 namespace NumericsLab.Tests;
 
